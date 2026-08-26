@@ -124,7 +124,7 @@
             .overlay { display: none !important; }
         }
 
-        /* ===== Busca com Autocomplete ===== */
+        /* ===== NOVO: Busca com Autocomplete ===== */
         .search-container { position: relative; }
         .autocomplete-input { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-card); background: var(--input-bg); color: var(--text-main); outline: none; font-size: 1rem; }
         .autocomplete-input:focus { border-color: var(--accent-green); }
@@ -133,7 +133,7 @@
         .autocomplete-item { padding: 12px; border-bottom: 1px solid var(--border-card); cursor: pointer; }
         .autocomplete-item:hover { background: rgba(0, 230, 118, 0.15); }
 
-        /* ===== Modal de Edição de Apontamento ===== */
+        /* ===== NOVO: Modal de Edição de Apontamento ===== */
         .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 2500; padding: 20px; }
         .modal.active { display: flex; }
         .modal-content { background: var(--card-bg); border-radius: 12px; padding: 25px; max-width: 450px; width: 100%; max-height: 90vh; overflow-y: auto; border: 1px solid var(--border-card); }
@@ -141,13 +141,13 @@
         .modal-actions { display: flex; gap: 10px; margin-top: 15px; }
         .modal-actions button { flex: 1; }
 
-        /* ===== Bloco Informativo ===== */
+        /* ===== NOVO: Bloco Informativo (referência / prévia de cálculo) ===== */
         .info-block { background: rgba(0, 230, 118, 0.08); padding: 12px 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid var(--accent-green); font-size: 0.9rem; }
         .highlight-success { color: var(--accent-green); font-weight: bold; }
         .mr-editable { cursor: pointer; text-decoration: underline dotted; text-decoration-color: var(--text-muted); }
         .mr-editable:hover { background: rgba(0, 230, 118, 0.1); }
 
-        /* ===== Linha do Tempo do Dia ===== */
+        /* ===== NOVO: Linha do Tempo do Dia (Dashboard) ===== */
         .timeline-item { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border-card); }
         .timeline-item:last-child { border-bottom: none; }
         .timeline-dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
@@ -156,7 +156,7 @@
         .timeline-sub { font-size: 0.8rem; color: var(--text-muted); margin-top: 2px; }
         .timeline-time { font-size: 0.8rem; color: var(--text-muted); white-space: nowrap; }
 
-        /* ===== Botões de Editar / Excluir ===== */
+        /* ===== NOVO: Botões de Editar / Excluir Apontamento ===== */
         .btn-edit { background: transparent; border: 1px solid #ffa726; color: #ffa726; padding: 6px 10px; border-radius: 5px; cursor: pointer; font-size: 0.85rem; margin-right: 5px; }
         .btn-edit:hover { background: #ffa726; color: #fff; }
         .btn-delete { background: transparent; border: 1px solid #ef5350; color: #ef5350; padding: 6px 10px; border-radius: 5px; cursor: pointer; font-size: 0.85rem; }
@@ -217,10 +217,7 @@
             </div>
         </div>
         <div class="user-info">
-            <button id="btn-pull-cloud" onclick="pullFromCloud()" style="background:none; border:none; color:var(--accent-blue); cursor:pointer; font-size:0.9rem; margin-right:15px; font-weight:bold;">
-                ⬇️ Puxar Dados
-            </button>
-            <span id="sync-indicator" style="font-size:0.8rem; margin-right:10px; white-space:nowrap;">⚙️ Sync não configurado</span>
+            <span id="sync-indicator" onclick="trySyncQueue(); pullFromSheets();" style="font-size:0.8rem; margin-right:10px; white-space:nowrap; cursor:pointer;" title="Toque para sincronizar agora">⚙️ Sync não configurado</span>
             <span id="logged-user">---</span>
             <button onclick="logout()" style="background:none; border:none; color:#ff5252; cursor:pointer;" title="Sair">
                 <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>
@@ -906,6 +903,10 @@
     </div>
 
     <script>
+        // ===== NOVO: Data de hoje SEMPRE com zero-padding (dd/mm/aaaa) =====
+        // toLocaleDateString('pt-BR') NÃO garante zero à esquerda em todo navegador (ex: "5/1/2025"),
+        // enquanto os registros são salvos a partir do input type="date" (sempre "05/01/2025").
+        // Essa função garante que a comparação de datas nunca falhe por causa de formatação.
         function getTodayBR() {
             const now = new Date();
             const d = String(now.getDate()).padStart(2, '0');
@@ -914,6 +915,7 @@
             return `${d}/${m}/${y}`;
         }
 
+        // Tema Claro / Escuro (Salva no dispositivo do usuário)
         function toggleTheme() {
             const body = document.body;
             if(body.getAttribute('data-theme') === 'light') {
@@ -925,9 +927,10 @@
                 localStorage.setItem('fontech-theme', 'light');
                 document.getElementById('btn-theme').innerText = 'Modo Escuro';
             }
-            loadDashboard();
+            loadDashboard(); // Redesenha os gráficos para as cores certas
         }
 
+        // Aplicar Tema salvo ao carregar
         if(localStorage.getItem('fontech-theme') === 'light') {
             document.body.setAttribute('data-theme', 'light');
             document.getElementById('btn-theme').innerText = 'Modo Escuro';
@@ -935,6 +938,7 @@
 
         document.getElementById('supply-date').value = new Date().toISOString().split('T')[0];
 
+        // Autenticação e Perfis
         let currentUser = { name: '', role: '' };
         
         function getAdmins() {
@@ -986,6 +990,7 @@
             currentUser = { name, role };
             document.getElementById('logged-user').innerText = `${name} (${role === 'Comboista' ? 'Comboio' : role})`;
             
+            // Controle de Acesso por Perfil
             const navByRole = {
                 Comboista: {
                     'nav-supply': true, 'nav-fuel': true, 'nav-lubricants': false, 'nav-lub-supply': false,
@@ -1014,8 +1019,10 @@
             loadData();
             setupSupplyAutocomplete();
             updateSyncIndicator();
+            pullFromSheets();
         }
 
+        // ===== NOVO: Gerenciar Administradores (cadastro dentro do app, só ADM vê) =====
         function renderAdminsList() {
             const admins = getAdmins();
             const tbody = document.getElementById('admins-list-tbody');
@@ -1098,6 +1105,7 @@
             if(viewId === 'view-admins') renderAdminsList();
         }
 
+        // Banco de Dados Offline (IndexedDB)
         const dbName = "FonTechERP_V3";
         const dbVersion = 4;
         let db; let myChartDash; let myChartProfile;
@@ -1107,11 +1115,15 @@
             db = e.target.result;
             if (!db.objectStoreNames.contains('machines')) db.createObjectStore('machines', { keyPath: 'prefix' });
             if (!db.objectStoreNames.contains('supplies')) db.createObjectStore('supplies', { keyPath: 'id', autoIncrement: true });
+            // NOVO: Controle de Combustível (Caminhão-Tanque e Caminhão-Comboio)
             if (!db.objectStoreNames.contains('fuelTanks')) db.createObjectStore('fuelTanks', { keyPath: 'id' });
             if (!db.objectStoreNames.contains('fuelMovements')) db.createObjectStore('fuelMovements', { keyPath: 'id', autoIncrement: true });
+            // NOVO: Controle de Lubrificantes (Óleo de Corrente, Óleo Hidráulico, etc)
             if (!db.objectStoreNames.contains('lubricants')) db.createObjectStore('lubricants', { keyPath: 'id' });
             if (!db.objectStoreNames.contains('lubricantMovements')) db.createObjectStore('lubricantMovements', { keyPath: 'id', autoIncrement: true });
+            // NOVO: Fila de sincronização com o Google Sheets (offline-first, envia quando há conexão)
             if (!db.objectStoreNames.contains('syncQueue')) db.createObjectStore('syncQueue', { keyPath: 'id', autoIncrement: true });
+            // NOVO: Sobrescritas manuais de Mín/Máx Horímetro no Relatório Mensal (chave: "PREFIXO_AAAA-MM")
             if (!db.objectStoreNames.contains('monthlyOverrides')) db.createObjectStore('monthlyOverrides', { keyPath: 'key' });
         };
         request.onsuccess = (e) => {
@@ -1132,6 +1144,7 @@
             req.onsuccess = () => callback(req.result);
         }
 
+        // ===== NOVO: Cria os 2 tanques de combustível na primeira vez que o app roda =====
         function seedFuelTanksIfEmpty() {
             getAllDB('fuelTanks', (tanks) => {
                 if(tanks.length > 0) return;
@@ -1140,6 +1153,7 @@
             });
         }
 
+        // ===== Cria os tipos de lubrificante padrão na primeira vez que o app roda (baseado na planilha real) =====
         function seedLubricantsIfEmpty() {
             getAllDB('lubricants', (lubs) => {
                 if(lubs.length > 0) return;
@@ -1152,6 +1166,7 @@
             });
         }
 
+        // Atualiza o saldo do Comboio mostrado na tela de Abastecer
         function refreshSupplyComboioBalance() {
             const el = document.getElementById('supply-comboio-balance');
             if(!el || !db) return;
@@ -1162,6 +1177,9 @@
             };
         }
 
+        // ===== NOVO: CONTROLE DE COMBUSTÍVEL (2 Caminhões) =====
+
+        // Carrega a tela: preenche saldos, data de hoje e histórico
         function loadFuelView() {
             document.getElementById('fuel-in-date').value = todayISO();
             document.getElementById('fuel-transfer-date').value = todayISO();
@@ -1170,6 +1188,7 @@
             renderFuelHistory();
         }
 
+        // Atualiza os cards de saldo e o "disponível" mostrado no form de transferência
         function refreshFuelBalances() {
             getAllDB('fuelTanks', (tanks) => {
                 const tanque = tanks.find(t => t.id === 'tanque');
@@ -1180,6 +1199,7 @@
             });
         }
 
+        // Entrada: Caminhão-Pipa externo -> Caminhão-Tanque
         function registerFuelEntry() {
             const date = document.getElementById('fuel-in-date').value;
             const liters = parseFloat(document.getElementById('fuel-in-liters').value);
@@ -1195,6 +1215,7 @@
 
                 tanque.balance = round1(tanque.balance + liters);
                 putDB('fuelTanks', tanque, () => {
+                    enqueueSync('tanques', tanque);
                     const [y, m, d] = date.split('-');
                     const movement = {
                         type: 'entrada',
@@ -1203,7 +1224,8 @@
                         date: `${d}/${m}/${y}`,
                         time: new Date().toLocaleTimeString('pt-BR'),
                         note: note,
-                        user: currentUser.name
+                        user: currentUser.name,
+                        syncId: guid()
                     };
                     putDB('fuelMovements', movement, () => {
                         enqueueSync('combustivel', movement);
@@ -1217,6 +1239,7 @@
             };
         }
 
+        // Transferência: Caminhão-Tanque -> Caminhão-Comboio
         function registerFuelTransfer() {
             const date = document.getElementById('fuel-transfer-date').value;
             const liters = parseFloat(document.getElementById('fuel-transfer-liters').value);
@@ -1242,7 +1265,9 @@
                 comboio.balance = round1(comboio.balance + liters);
 
                 putDB('fuelTanks', tanque, () => {
+                    enqueueSync('tanques', tanque);
                     putDB('fuelTanks', comboio, () => {
+                        enqueueSync('tanques', comboio);
                         const [y, m, d] = date.split('-');
                         const movement = {
                             type: 'transferencia',
@@ -1251,7 +1276,8 @@
                             date: `${d}/${m}/${y}`,
                             time: new Date().toLocaleTimeString('pt-BR'),
                             note: 'Tanque → Comboio',
-                            user: currentUser.name
+                            user: currentUser.name,
+                            syncId: guid()
                         };
                         putDB('fuelMovements', movement, () => {
                             enqueueSync('combustivel', movement);
@@ -1265,6 +1291,8 @@
             };
         }
 
+        // Desconta do saldo do Caminhão-Comboio quando um abastecimento de máquina é lançado.
+        // Retorna via callback(true) se deu certo, callback(false) se não havia saldo suficiente.
         function debitComboioFuel(liters, dateBR, callback) {
             const tx = db.transaction('fuelTanks', 'readonly');
             tx.objectStore('fuelTanks').get('comboio').onsuccess = (e) => {
@@ -1277,6 +1305,7 @@
 
                 comboio.balance = round1(comboio.balance - liters);
                 putDB('fuelTanks', comboio, () => {
+                    enqueueSync('tanques', comboio);
                     const movement = {
                         type: 'saida',
                         tankId: 'comboio',
@@ -1284,7 +1313,8 @@
                         date: dateBR,
                         time: new Date().toLocaleTimeString('pt-BR'),
                         note: 'Abastecimento de máquina',
-                        user: currentUser.name
+                        user: currentUser.name,
+                        syncId: guid()
                     };
                     putDB('fuelMovements', movement, () => {
                         enqueueSync('combustivel', movement);
@@ -1327,6 +1357,8 @@
             });
         }
 
+        // ===== CONTROLE DE LUBRIFICANTES (lançamento por máquina, igual à planilha física) =====
+
         const LUB_TYPES = [
             { id: 'hidraulico', field: 'lub-hidraulico', short: 'Hidr.' },
             { id: 'corrente', field: 'lub-corrente', short: 'Corr.' },
@@ -1336,12 +1368,14 @@
             { id: 'radiex', field: 'lub-radiex', short: 'Radiex' }
         ];
 
+        // Tela "Estoque de Lubrificantes": saldos + Entrada de Estoque
         function loadLubricantStockView() {
             document.getElementById('lub-entry-date').value = todayISO();
             refreshLubricantBalances();
             populateLubricantEntrySelect();
         }
 
+        // Tela "Lançar Lubrificação": formulário por máquina + histórico
         function loadLubSupplyView() {
             document.getElementById('lub-date').value = todayISO();
             document.getElementById('lub-history-filter').value = todayISO();
@@ -1369,6 +1403,7 @@
             });
         }
 
+        // Entrada de estoque novo (compra/reposição) — não é ligada a nenhuma máquina
         function registerLubricantEntry() {
             const lubId = document.getElementById('lub-entry-select').value;
             const date = document.getElementById('lub-entry-date').value;
@@ -1385,6 +1420,7 @@
 
                 lub.balance = round1(lub.balance + liters);
                 putDB('lubricants', lub, () => {
+                    enqueueSync('estoquelub', lub);
                     const [y, m, d] = date.split('-');
                     const movement = {
                         kind: 'entrada',
@@ -1394,7 +1430,8 @@
                         date: `${d}/${m}/${y}`,
                         time: new Date().toLocaleTimeString('pt-BR'),
                         note: 'Entrada de estoque',
-                        user: currentUser.name
+                        user: currentUser.name,
+                        syncId: guid()
                     };
                     putDB('lubricantMovements', movement, () => {
                         enqueueSync('lubrificante', movement);
@@ -1406,10 +1443,11 @@
             };
         }
 
+        // ===== Autocomplete de máquina para o lançamento de lubrificação (mesmo padrão do Abastecer diesel) =====
         function setupLubMachineAutocomplete() {
             const input = document.getElementById('lub-machine');
             const list = document.getElementById('lub-machine-list');
-            if(input.dataset.bound) return;
+            if(input.dataset.bound) return; // evita registrar o listener mais de uma vez
             input.dataset.bound = 'true';
 
             input.addEventListener('input', () => {
@@ -1438,6 +1476,9 @@
             });
         }
 
+        // Busca, para uma máquina + tipo de óleo específico, o lançamento de lubrificante mais recente
+        // que tenha aquele óleo preenchido com horímetro válido. Retorna null se não houver histórico.
+        // Isolado do horímetro de diesel (m.lastHorimeter) de propósito — trilhas de cálculo não se misturam.
         function getLastLubHorimeter(machinePrefix, lubTypeId, allMovs) {
             const relevant = allMovs.filter(m =>
                 m.kind === 'saida' &&
@@ -1446,6 +1487,7 @@
                 m.horimeter !== undefined && m.horimeter !== null && m.horimeter !== ''
             );
             if(relevant.length === 0) return null;
+            // Entre os relevantes, pega o de maior horímetro registrado (mais recente na progressão da máquina)
             relevant.sort((a, b) => parseFloat(b.horimeter) - parseFloat(a.horimeter));
             return parseFloat(relevant[0].horimeter);
         }
@@ -1460,6 +1502,7 @@
                 document.getElementById('lub-machine-info').style.display = 'block';
                 document.getElementById('lub-machine-list').classList.remove('active');
 
+                // Mostra o último horímetro registrado em lançamento de LUBRIFICANTE (não o de diesel)
                 getAllDB('lubricantMovements', (movs) => {
                     const lastHidraulico = getLastLubHorimeter(prefix, 'hidraulico', movs);
                     const lastCorrente = getLastLubHorimeter(prefix, 'corrente', movs);
@@ -1471,6 +1514,7 @@
             };
         }
 
+        // Prévia de cálculo (horas / L por hora) para Hidráulico e Corrente, ao digitar
         function updateLubCalcPreview() {
             const prefix = document.getElementById('lub-machine-prefix').value;
             const current = parseFloat(document.getElementById('lub-horimeter').value);
@@ -1510,6 +1554,7 @@
             });
         }
 
+        // Lançamento principal: registra os óleos aplicados numa máquina, numa visita/turno só (replica 1 linha da planilha)
         function registerLubricantSupply() {
             const prefix = document.getElementById('lub-machine-prefix').value.trim();
             const chosenDate = document.getElementById('lub-date').value;
@@ -1520,6 +1565,7 @@
             if(!prefix) return alert("Selecione uma máquina na lista de busca.");
             if(!chosenDate) return alert("Selecione a data.");
 
+            // Coleta apenas os campos de óleo preenchidos (a planilha real deixa em branco o que não se aplica)
             const applied = LUB_TYPES
                 .map(t => ({ ...t, liters: parseFloat(document.getElementById(t.field).value) }))
                 .filter(t => !isNaN(t.liters) && t.liters > 0);
@@ -1531,6 +1577,7 @@
                 const machine = eMach.target.result;
                 if(!machine) return alert("Máquina não encontrada! Selecione na lista.");
 
+                // Confere saldo de TODOS os óleos aplicados antes de debitar qualquer um (evita débito parcial)
                 const txCheck = db.transaction('lubricants', 'readonly');
                 const storeCheck = txCheck.objectStore('lubricants');
                 const results = {};
@@ -1559,10 +1606,11 @@
                         return alert(`Erro: estoque insuficiente para um ou mais óleos.\n${detalhes}`);
                     }
 
+                    // Debita cada óleo do estoque
                     applied.forEach(t => {
                         const lub = results[t.id];
                         lub.balance = round1(lub.balance - t.liters);
-                        putDB('lubricants', lub);
+                        putDB('lubricants', lub, () => enqueueSync('estoquelub', lub));
                     });
 
                     const [y, m, d] = chosenDate.split('-');
@@ -1578,10 +1626,15 @@
                         time: new Date().toLocaleTimeString('pt-BR'),
                         horimeter: horimeter || null,
                         note: note,
-                        user: currentUser.name
+                        user: currentUser.name,
+                        syncId: guid()
                     };
+                    // Grava os litros de cada tipo aplicado como campos próprios (hidraulico, corrente, motor...)
                     applied.forEach(t => { record[t.id] = t.liters; });
 
+                    // NOVO: calcula e grava Horas Trabalhadas + L/h de Hidráulico e Corrente,
+                    // usando o horímetro do último lançamento de LUBRIFICANTE daquele óleo (trilha isolada do diesel).
+                    // Só calcula se o horímetro atual foi informado e o óleo em questão foi aplicado agora.
                     function saveWithHourCalc(movs) {
                         if(!isNaN(currentHorimeter)) {
                             if(record.hidraulico !== undefined) {
@@ -1637,6 +1690,7 @@
             getAllDB('lubricantMovements', (movs) => {
                 const table = document.querySelector('#lub-history-table tbody');
                 table.innerHTML = '';
+                // Histórico de lançamento por máquina (kind === 'saida'); entradas de estoque não aparecem nesta tabela de máquina
                 let list = movs.filter(m => m.kind === 'saida').slice().reverse();
                 if(filterBR) list = list.filter(m => m.date === filterBR);
 
@@ -1668,15 +1722,32 @@
             });
         }
 
+        // ===== Utilitários compartilhados =====
         function todayISO() {
             const now = new Date();
             const d = String(now.getDate()).padStart(2, '0');
             const m = String(now.getMonth() + 1).padStart(2, '0');
             return `${now.getFullYear()}-${m}-${d}`;
         }
-        function round1(n) { return Math.round(n * 10) / 10; }
-        function round2(n) { return Math.round(n * 100) / 100; }
+        // Gera um ID único global (não confundir com o "id" local do IndexedDB, que é só
+        // autoincremento por aparelho — dois aparelhos podem ter o "id" 5 sendo registros
+        // diferentes. O syncId é o que identifica um registro de forma única entre aparelhos.
+        function guid() {
+            return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
+        }
 
+        function round1(n) {
+            return Math.round(n * 10) / 10;
+        }
+        // Arredondamento de 2 casas decimais — usado para Litros e L/h no Relatório Mensal,
+        // que precisa da mesma precisão da planilha de referência (ex: 8811,28 L, 20,28 L/h).
+        function round2(n) {
+            return Math.round(n * 100) / 100;
+        }
+
+        // Converte "dd/mm/aaaa" em {year, month} (month 0-indexado, igual ao objeto Date nativo).
+        // Retorna null se a string não bater com o formato esperado, para nunca quebrar a agregação
+        // por causa de um registro antigo ou malformado.
         function parseDateBRToYearMonth(dateStr) {
             if(!dateStr || typeof dateStr !== 'string') return null;
             const parts = dateStr.split('/');
@@ -1688,11 +1759,21 @@
             return { year, month };
         }
 
+        // ===== NOVO: RELATÓRIO MENSAL CONSOLIDADO (ADM) =====
+        //
+        // Junta, por máquina, os lançamentos de Diesel (store 'supplies') e de Lubrificante
+        // (store 'lubricantMovements', apenas Hidráulico e Corrente) de um mês/ano escolhido.
+        // Mínimo/Máximo Horímetro consideram os horímetros de AMBAS as trilhas juntas.
+        // Litros e L/h de cada categoria (Diesel, Hidráulico, Corrente) são calculados de forma
+        // independente, cada um dividido pelas mesmas Horas do mês (Máximo - Mínimo).
+
         function monthlyOverrideKey(prefix, year, month) {
             const mm = String(month + 1).padStart(2, '0');
             return `${prefix}_${year}-${mm}`;
         }
 
+        // Função central de agregação. 'monthValue' vem do input type="month" (formato "aaaa-mm").
+        // Devolve, via callback, um array de linhas prontas para renderizar/exportar, mais os totais.
         function getMonthlyAggregates(monthValue, callback) {
             if(!monthValue) return callback({ rows: [], totals: null });
             const [yearStr, monthStr] = monthValue.split('-');
@@ -1717,12 +1798,14 @@
                                 const dieselEntries = supplies.filter(s => s.machineId === m.prefix && belongsToMonth(s.date));
                                 const lubEntries = lubMovs.filter(l => l.kind === 'saida' && l.machineId === m.prefix && belongsToMonth(l.date));
 
+                                // Sem nenhum lançamento no mês para esta máquina: não gera linha (evita poluir o relatório com zeros)
                                 if(dieselEntries.length === 0 && lubEntries.length === 0) return;
 
                                 const litersDiesel = round2(dieselEntries.reduce((acc, s) => acc + (s.liters || 0), 0));
                                 const litersHidraulico = round2(lubEntries.reduce((acc, l) => acc + (l.hidraulico || 0), 0));
                                 const litersCorrente = round2(lubEntries.reduce((acc, l) => acc + (l.corrente || 0), 0));
 
+                                // Mín/Máx horímetro: entre diesel + lubrificante juntos, como definido
                                 const allHorimeters = [
                                     ...dieselEntries.map(s => parseFloat(s.horimeter)).filter(h => !isNaN(h)),
                                     ...lubEntries.map(l => parseFloat(l.horimeter)).filter(h => !isNaN(h))
@@ -1731,6 +1814,7 @@
                                 let minH = allHorimeters.length > 0 ? Math.min(...allHorimeters) : null;
                                 let maxH = allHorimeters.length > 0 ? Math.max(...allHorimeters) : null;
 
+                                // Sobrescrita manual (edição inline na tabela) tem prioridade sobre o cálculo automático
                                 const key = monthlyOverrideKey(m.prefix, targetYear, targetMonth);
                                 const override = overrideMap[key];
                                 if(override) {
@@ -1754,6 +1838,7 @@
                                 });
                             });
 
+                            // Ordena por prefixo, para ficar estável e previsível entre exportações
                             rows.sort((a, b) => a.prefix.localeCompare(b.prefix));
 
                             const totals = rows.reduce((acc, r) => ({
@@ -1841,10 +1926,12 @@
 
         const MONTH_ABBR_PT = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
 
+        // Edição inline de Mínimo/Máximo Horímetro direto na tabela (sobrescrita manual, não mexe
+        // nos lançamentos originais). 'field' é 'min' ou 'max'.
         function openHorimeterEdit(prefix, field, currentValue) {
             const label = field === 'min' ? 'Mínimo' : 'Máximo';
             const input = prompt(`Corrigir ${label} Horímetro de ${prefix}:`, currentValue != null && !isNaN(currentValue) ? currentValue : '');
-            if(input === null) return; 
+            if(input === null) return; // usuário cancelou
 
             const newValue = parseFloat(input.replace(',', '.'));
             if(isNaN(newValue)) return alert('Valor inválido. Use apenas números.');
@@ -1927,18 +2014,40 @@
             });
         }
 
-        // ===== NOVO: URL DO SCRIPT DO GOOGLE =====
-        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx4Tfx250FzejEE_ndC-WG0dVSzdN1t5wNeIycQr65Txj67Whg_9IpTWOk1QtNMML3h/exec';
+        // ===== NOVO: SINCRONIZAÇÃO COM GOOGLE SHEETS (offline-first) =====
+        //
+        // Como funciona:
+        // 1. Todo lançamento (diesel de máquina, combustível de caminhão, lubrificante) continua sendo
+        //    salvo localmente no IndexedDB primeiro, exatamente como já era — nada muda no fluxo offline.
+        // 2. Além disso, uma CÓPIA resumida do lançamento é colocada na fila "syncQueue".
+        // 3. Quando o navegador detecta conexão (evento 'online', ou ao abrir o app já conectado),
+        //    o app tenta enviar cada item da fila para o Google Apps Script, um de cada vez.
+        // 4. Itens enviados com sucesso saem da fila. Itens que falham continuam na fila e são
+        //    tentados novamente na próxima vez que houver conexão — nada se perde.
+        //
+        // PENDÊNCIA DE CONFIGURAÇÃO: troque o valor abaixo pela URL /exec gerada ao publicar
+        // o Google Apps Script (veja o arquivo GOOGLE_APPS_SCRIPT.gs fornecido separadamente).
+        // Enquanto estiver vazia, os lançamentos continuam funcionando 100% offline normalmente,
+        // apenas a fila fica acumulando sem ser enviada (nada trava, nada é perdido).
+        const GOOGLE_SCRIPT_URL = ''; // cole aqui a URL do Web App depois de implantar o Apps Script
+        const SYNC_TOKEN = '08747e04050b22a14bb11305b79992dc5f3b5983'; // mesmo valor do TOKEN_SECRETO no Codigo.gs
 
         let syncInProgress = false;
 
         function initSyncEngine() {
-            window.addEventListener('online', () => trySyncQueue());
+            window.addEventListener('online', () => { trySyncQueue(); pullFromSheets(); });
             window.addEventListener('offline', () => updateSyncIndicator());
             updateSyncIndicator();
-            if(navigator.onLine) trySyncQueue();
+            if(navigator.onLine) { trySyncQueue(); pullFromSheets(); }
+            // Reforço periódico: garante que o que outros aparelhos lançaram apareça aqui
+            // mesmo sem trocar de tela ou perder/recuperar conexão.
+            setInterval(() => { if(navigator.onLine) pullFromSheets(); }, 3 * 60 * 1000);
         }
 
+        // Adiciona um lançamento à fila de envio. Chamado de dentro de cada função que já salva dados
+        // localmente (saveSupply, registerFuelEntry, registerLubricantSupply, etc), logo após o putDB
+        // principal ter sucesso — nunca antes, para garantir que o dado local sempre existe primeiro.
+        // 'sheet' identifica a planilha de destino: 'diesel', 'combustivel' ou 'lubrificante'.
         function enqueueSync(sheet, payload) {
             putDB('syncQueue', {
                 sheet: sheet,
@@ -1951,6 +2060,8 @@
             });
         }
 
+        // Percorre a fila e tenta enviar cada item ao Apps Script, um de cada vez (evita
+        // sobrecarregar o Apps Script com envios simultâneos, que tem limite de execuções concorrentes).
         function trySyncQueue() {
             if(syncInProgress || !db || !GOOGLE_SCRIPT_URL) { updateSyncIndicator(); return; }
             syncInProgress = true;
@@ -1967,19 +2078,24 @@
 
             fetch(GOOGLE_SCRIPT_URL, {
                 method: 'POST',
-                mode: 'no-cors', 
-                headers: { 'Content-Type': 'text/plain' }, 
-                body: JSON.stringify({ sheet: item.sheet, payload: item.payload })
+                mode: 'no-cors', // Apps Script Web Apps não retornam CORS legível; assumimos sucesso se não houver erro de rede
+                headers: { 'Content-Type': 'text/plain' }, // evita preflight OPTIONS, que o Apps Script não trata
+                body: JSON.stringify({ sheet: item.sheet, payload: item.payload, token: SYNC_TOKEN })
             }).then(() => {
+                // Com mode: 'no-cors' não é possível ler o status HTTP real — a ausência de erro de rede
+                // é o sinal disponível de que a requisição chegou. Remove da fila e segue para o próximo.
                 const tx = db.transaction('syncQueue', 'readwrite');
                 tx.objectStore('syncQueue').delete(item.id);
                 tx.oncomplete = () => sendNextItem(items, index + 1);
             }).catch(() => {
+                // Falha de rede real (ex: perdeu sinal no meio do envio). Mantém na fila e para por aqui;
+                // o próximo evento 'online' tentará de novo, incluindo este e os que ainda não foram tentados.
                 syncInProgress = false;
                 updateSyncIndicator();
             });
         }
 
+        // Atualiza o indicador visual de sincronização (badge no cabeçalho, se presente na tela)
         function updateSyncIndicator() {
             const el = document.getElementById('sync-indicator');
             if(!el || !db) return;
@@ -2002,6 +2118,64 @@
             });
         }
 
+        // ===== NOVO: Puxa dados do Sheets (o que outros aparelhos já sincronizaram) =====
+        // Mapa de categoria -> store local do IndexedDB, e se o dado é "com estado" (a linha mais
+        // recente vale, ex: saldo de tanque) ou "log" (cada linha é um evento, nunca se sobrescreve,
+        // só se adiciona o que ainda não existe localmente, usando syncId pra não duplicar).
+        const SYNC_CATEGORIES = {
+            maquinas:    { store: 'machines',           stateful: true  },
+            tanques:     { store: 'fuelTanks',           stateful: true  },
+            estoquelub:  { store: 'lubricants',          stateful: true  },
+            diesel:      { store: 'supplies',            stateful: false },
+            combustivel: { store: 'fuelMovements',       stateful: false },
+            lubrificante:{ store: 'lubricantMovements',  stateful: false }
+        };
+
+        async function pullFromSheets() {
+            if (!GOOGLE_SCRIPT_URL || !db || !navigator.onLine) return;
+
+            for (const [sheet, cfg] of Object.entries(SYNC_CATEGORIES)) {
+                try {
+                    const resp = await fetch(`${GOOGLE_SCRIPT_URL}?sheet=${sheet}&token=${SYNC_TOKEN}`);
+                    const result = await resp.json();
+                    if (!result || !result.dados) continue;
+
+                    if (cfg.stateful) {
+                        // A Sheet é a versão mais recente conhecida: grava por cima da local (mesma chave = atualiza).
+                        for (const row of result.dados) {
+                            await new Promise(res => putDB(cfg.store, row, res));
+                        }
+                    } else {
+                        // Log: só adiciona o que este aparelho ainda não tem (compara por syncId, não por id local).
+                        const existentes = await new Promise(res => getAllDB(cfg.store, res));
+                        const idsConhecidos = new Set(existentes.map(r => r.syncId).filter(Boolean));
+                        for (const row of result.dados) {
+                            if (!row.syncId || idsConhecidos.has(row.syncId)) continue;
+                            const { id, ...semIdLocal } = row; // descarta o "id" vindo de outro aparelho; o IndexedDB gera um novo local
+                            await new Promise(res => putDB(cfg.store, semIdLocal, res));
+                        }
+                    }
+                } catch (err) {
+                    console.warn(`Falha ao puxar "${sheet}" do Sheets:`, err);
+                }
+            }
+
+            // Atualiza o que estiver visível na tela agora, pra refletir o que acabou de chegar
+            loadData();
+            refreshFuelBalances();
+            refreshLubricantBalances();
+            const activeView = document.querySelector('.main-content .view.active');
+            if (activeView) {
+                if (activeView.id === 'view-history') renderHistoryEditable();
+                if (activeView.id === 'view-fuel') renderFuelHistory();
+                if (activeView.id === 'view-lubricants') renderLubricantHistory();
+                if (activeView.id === 'view-machines-view') renderMachinesViewOnly();
+                if (activeView.id === 'view-dash') loadDashboard();
+            }
+        }
+
+        // ===== NOVO: EXPORTAÇÃO DE COMBUSTÍVEL =====
+
         function getFuelExportData(callback) {
             getAllDB('fuelMovements', (movs) => {
                 const today = getTodayBR();
@@ -2017,6 +2191,7 @@
             });
         }
 
+        // Preenche a prévia (saldos + tabela) da tela de exportação de combustível
         function loadExportFuelPreview() {
             getAllDB('fuelTanks', (tanks) => {
                 const tanque = tanks.find(t => t.id === 'tanque');
@@ -2073,6 +2248,8 @@
             });
         }
 
+        // ===== NOVO: EXPORTAÇÃO DE LUBRIFICANTES =====
+
         function getLubExportData(callback) {
             getAllDB('lubricantMovements', (movs) => {
                 const today = getTodayBR();
@@ -2096,6 +2273,7 @@
             });
         }
 
+        // Preenche a prévia (saldos + tabela) da tela de exportação de lubrificantes
         function loadExportLubPreview() {
             getAllDB('lubricants', (lubs) => {
                 const grid = document.getElementById('export-lub-balance-grid');
@@ -2174,6 +2352,7 @@
             });
         }
 
+        // MÁQUINAS - Salvar / Editar
         function saveMachine() {
             const prefix = document.getElementById('mach-prefix').value.trim();
             const name = document.getElementById('mach-name').value.trim();
@@ -2182,13 +2361,9 @@
 
             if(!prefix || !name) return alert("Preencha Prefixo e Nome!");
 
-            const machineData = { prefix, name, lastHorimeter: horimeter, lastEditedBy: currentUser.name };
-
+            const machineData = { prefix, name, lastHorimeter: horimeter, lastEditedBy: currentUser.name, syncId: prefix };
             putDB('machines', machineData, () => {
-                
-                // >>> ADICIONADO: Joga o cadastro pra fila de sincronização <<<
-                enqueueSync('maquinas', machineData); 
-
+                enqueueSync('maquinas', machineData);
                 alert(isEdit ? "Máquina atualizada!" : "Máquina cadastrada!");
                 
                 document.getElementById('mach-prefix').value = '';
@@ -2204,7 +2379,7 @@
         }
 
         function editMachine(prefix, ev) {
-            ev.stopPropagation(); 
+            ev.stopPropagation(); // Evita abrir o perfil da máquina ao clicar em editar
             const tx = db.transaction('machines', 'readonly');
             const req = tx.objectStore('machines').get(prefix);
             req.onsuccess = () => {
@@ -2222,6 +2397,433 @@
             };
         }
 
+        // ABASTECIMENTO COM AUTOCOMPLETE
+        function saveSupply() {
+            const prefix = document.getElementById('supply-machine-prefix').value.trim();
+            const chosenDate = document.getElementById('supply-date').value;
+            const currentHorimeter = parseFloat(document.getElementById('supply-horimeter').value);
+            const liters = parseFloat(document.getElementById('supply-liters').value);
+            
+            if(!prefix) return alert("Selecione uma máquina na lista de busca.");
+            if(!chosenDate) return alert("Selecione a data do abastecimento.");
+            if(isNaN(currentHorimeter) || isNaN(liters)) return alert("Preencha todos os campos corretamente.");
+
+            const tx = db.transaction('machines', 'readonly');
+            const req = tx.objectStore('machines').get(prefix);
+            
+            req.onsuccess = () => {
+                const machine = req.result;
+                if(!machine) return alert("Máquina não encontrada! Selecione na lista.");
+
+                const prevHorimeter = machine.lastHorimeter;
+                
+                if (currentHorimeter <= prevHorimeter) {
+                    return alert(`Erro: Horímetro atual (${currentHorimeter}) menor ou igual ao anterior (${prevHorimeter}).`);
+                }
+
+                // CÁLCULO EXATO (Prevenção de Dízimas)
+                const hoursWorked = Math.round((currentHorimeter * 10) - (prevHorimeter * 10)) / 10;
+                
+                let litersPerHour = 0;
+                if (hoursWorked > 0) {
+                    litersPerHour = (liters / hoursWorked).toFixed(2);
+                }
+
+                // Data escolhida pelo usuário, formatada como no padrão original (dd/mm/aaaa)
+                const [y, m, d] = chosenDate.split('-');
+                const formattedDate = `${d}/${m}/${y}`;
+
+                const supplyData = {
+                    machineId: prefix,
+                    machineName: machine.name,
+                    user: currentUser.name,
+                    date: formattedDate,
+                    time: new Date().toLocaleTimeString('pt-BR'),
+                    liters: liters,
+                    horimeterPrev: prevHorimeter,
+                    horimeter: currentHorimeter,
+                    hoursWorked: hoursWorked,
+                    litersPerHour: parseFloat(litersPerHour),
+                    syncId: guid()
+                };
+
+                // NOVO: desconta automaticamente do saldo do Caminhão-Comboio.
+                // Se não houver litros suficientes, o lançamento é bloqueado ANTES de gravar qualquer coisa.
+                debitComboioFuel(liters, formattedDate, (ok, comboioBalance) => {
+                    if(!ok) {
+                        return alert(`Erro: o Caminhão-Comboio só tem ${comboioBalance} L de diesel disponíveis. Não é possível abastecer ${liters} L.\nFaça uma transferência do Caminhão-Tanque antes de continuar.`);
+                    }
+
+                    putDB('supplies', supplyData, () => {
+                        machine.lastHorimeter = currentHorimeter;
+                        putDB('machines', machine, () => {
+                            enqueueSync('diesel', { ...supplyData, syncKind: 'novo' });
+                            alert(`Abastecimento Registrado!\nHoras Trabalhadas: ${hoursWorked}h\nMédia de Consumo: ${litersPerHour > 0 ? litersPerHour + ' L/h' : 'Base'}\nSaldo restante no Comboio: ${comboioBalance} L`);
+                            document.getElementById('supply-machine').value = '';
+                            document.getElementById('supply-machine-prefix').value = '';
+                            document.getElementById('supply-machine-info').style.display = 'none';
+                            document.getElementById('supply-horimeter').value = '';
+                            document.getElementById('supply-liters').value = '';
+                            document.getElementById('supply-date').value = new Date().toISOString().split('T')[0];
+                            updateSupplyCalcPreview();
+                            refreshSupplyComboioBalance();
+                            loadData();
+                        });
+                    });
+                });
+            };
+        }
+
+        // ===== NOVO: Autocomplete "digite e aparece a lista" para Abastecer =====
+        function setupSupplyAutocomplete() {
+            const input = document.getElementById('supply-machine');
+            const list = document.getElementById('supply-machine-list');
+
+            input.addEventListener('input', () => {
+                const query = input.value.toLowerCase().trim();
+                document.getElementById('supply-machine-prefix').value = '';
+                document.getElementById('supply-machine-info').style.display = 'none';
+                list.innerHTML = '';
+                list.classList.remove('active');
+                if(!query || !db) return;
+
+                getAllDB('machines', (machines) => {
+                    const filtered = machines.filter(m =>
+                        m.prefix.toLowerCase().includes(query) || m.name.toLowerCase().includes(query)
+                    );
+                    if(filtered.length === 0) return;
+
+                    list.innerHTML = filtered.map(m =>
+                        `<div class="autocomplete-item" onclick="selectSupplyMachine('${m.prefix}')">${m.prefix} - ${m.name}</div>`
+                    ).join('');
+                    list.classList.add('active');
+                });
+            });
+
+            document.addEventListener('click', (e) => {
+                if(!e.target.closest('#view-supply .search-container')) list.classList.remove('active');
+            });
+        }
+
+        function selectSupplyMachine(prefix) {
+            const tx = db.transaction('machines', 'readonly');
+            tx.objectStore('machines').get(prefix).onsuccess = (e) => {
+                const m = e.target.result;
+                if(!m) return;
+                document.getElementById('supply-machine').value = `${m.prefix} - ${m.name}`;
+                document.getElementById('supply-machine-prefix').value = m.prefix;
+                document.getElementById('supply-last-horimeter').innerText = m.lastHorimeter;
+                document.getElementById('supply-machine-info').style.display = 'block';
+                document.getElementById('supply-machine-list').classList.remove('active');
+                updateSupplyCalcPreview();
+            };
+        }
+
+        // ===== NOVO: Prévia de cálculo (horas / L por hora) ao digitar =====
+        function updateSupplyCalcPreview() {
+            const prefix = document.getElementById('supply-machine-prefix').value;
+            const current = parseFloat(document.getElementById('supply-horimeter').value);
+            const liters = parseFloat(document.getElementById('supply-liters').value);
+            const hoursEl = document.getElementById('supply-preview-hours');
+            const lphEl = document.getElementById('supply-preview-lph');
+
+            if(!prefix || isNaN(current)) { hoursEl.innerText = '0.0'; lphEl.innerText = '0.0'; return; }
+
+            const tx = db.transaction('machines', 'readonly');
+            tx.objectStore('machines').get(prefix).onsuccess = (e) => {
+                const m = e.target.result;
+                if(!m) return;
+                const hours = Math.max(Math.round((current * 10) - (m.lastHorimeter * 10)) / 10, 0);
+                const lph = (hours > 0 && !isNaN(liters)) ? (liters / hours).toFixed(2) : '0.0';
+                hoursEl.innerText = hours.toFixed(1);
+                lphEl.innerText = lph;
+            };
+        }
+
+        // LOAD DATA & TABELAS
+        function loadData() {
+            if(!db) return;
+            
+            getAllDB('machines', (machines) => {
+                const table = document.querySelector('#machines-table tbody');
+                table.innerHTML = '';
+                
+                machines.forEach(m => {
+                    table.innerHTML += `<tr onclick="openMachineProfile('${m.prefix}')">
+                        <td>${m.prefix}</td>
+                        <td>${m.name}</td>
+                        <td>${m.lastHorimeter}</td>
+                        <td><button class="btn-action" onclick="editMachine('${m.prefix}', event)">Editar</button></td>
+                    </tr>`;
+                });
+            });
+
+            getAllDB('supplies', (supplies) => {
+                const table = document.querySelector('#history-table tbody');
+                table.innerHTML = '';
+                supplies.reverse().forEach(s => {
+                    const lph = s.litersPerHour > 0 ? s.litersPerHour + ' L/h' : 'Base';
+                    table.innerHTML += `<tr>
+                        <td>${s.date} ${s.time}</td>
+                        <td>${s.machineId} - ${s.machineName}</td>
+                        <td>${s.liters} L</td>
+                        <td>${s.horimeter}</td>
+                        <td>${lph}</td>
+                        <td>${s.user || '-'}</td>
+                    </tr>`;
+                });
+            });
+            loadDashboard();
+        }
+
+        // ===== NOVO: Linha do Tempo do Dia (combina Abastecimento, Combustível e Lubrificantes) =====
+        function renderTimeline() {
+            const el = document.getElementById('timeline-content');
+            if(!el || !db) return;
+
+            const today = getTodayBR();
+            const role = currentUser.role;
+            const showFuel = role === 'ADM' || role === 'Comboista'; // Comboio e ADM veem abastecimento + combustível
+            const showLub = role === 'ADM' || role === 'Lubrificantes'; // Lubrificantes e ADM veem lubrificantes
+
+            getAllDB('supplies', (supplies) => {
+                getAllDB('fuelMovements', (fuelMovs) => {
+                    getAllDB('lubricantMovements', (lubMovs) => {
+                        const events = [];
+
+                        if(showFuel) {
+                            supplies.filter(s => s.date === today).forEach(s => {
+                                events.push({
+                                    time: s.time, color: '#00e676',
+                                    title: `⛽ Abastecimento: ${s.machineId} - ${s.machineName}`,
+                                    sub: `${s.liters} L | Horímetro ${s.horimeter} | ${s.litersPerHour > 0 ? s.litersPerHour + ' L/h' : 'Base'} | ${s.user || '-'}`
+                                });
+                            });
+
+                            const fuelLabels = { entrada: '⛽ Entrada de Diesel (Pipa→Tanque)', transferencia: '🔄 Transferência (Tanque→Comboio)', saida: '➖ Saída de Diesel (Abastecimento)', ajuste: '✏️ Ajuste de Diesel' };
+                            fuelMovs.filter(m => m.date === today).forEach(m => {
+                                events.push({
+                                    time: m.time, color: '#4fc3f7',
+                                    title: fuelLabels[m.type] || m.type,
+                                    sub: `${m.liters} L | ${m.note || '-'} | ${m.user || '-'}`
+                                });
+                            });
+                        }
+
+                        if(showLub) {
+                            lubMovs.filter(m => m.date === today).forEach(m => {
+                                if(m.kind === 'entrada') {
+                                    events.push({
+                                        time: m.time, color: '#ffa726',
+                                        title: `➕ Entrada de Estoque: ${m.lubricantName}`,
+                                        sub: `${m.liters} L | ${m.user || '-'}`
+                                    });
+                                } else {
+                                    const partes = LUB_TYPES.filter(t => m[t.id]).map(t => `${t.short} ${m[t.id]}L`).join(', ');
+                                    events.push({
+                                        time: m.time, color: '#ffa726',
+                                        title: `🛢️ Lubrificação: ${m.machineId} - ${m.machineName}`,
+                                        sub: `${partes} | ${m.user || '-'}`
+                                    });
+                                }
+                            });
+                        }
+
+                        // Ordena do mais recente para o mais antigo, usando a hora no formato HH:MM:SS
+                        events.sort((a, b) => b.time.localeCompare(a.time));
+
+                        if(events.length === 0) {
+                            el.innerHTML = `<p style="text-align:center; color: var(--text-muted); padding: 15px 0;">Nenhuma movimentação registrada hoje ainda.</p>`;
+                            return;
+                        }
+
+                        el.innerHTML = events.map(ev => `
+                            <div class="timeline-item">
+                                <div class="timeline-dot" style="background:${ev.color};"></div>
+                                <div class="timeline-body">
+                                    <div class="timeline-title">${ev.title}</div>
+                                    <div class="timeline-sub">${ev.sub}</div>
+                                </div>
+                                <div class="timeline-time">${ev.time}</div>
+                            </div>
+                        `).join('');
+                    });
+                });
+            });
+        }
+
+        function loadDashboard() {
+            if(!db) return;
+            const role = currentUser.role;
+            const showFuelBlock = role === 'ADM' || role === 'Comboista';
+            const showLubBlock = role === 'ADM' || role === 'Lubrificantes';
+
+            document.getElementById('dash-fuel-block').style.display = showFuelBlock ? 'block' : 'none';
+            document.getElementById('dash-lub-block').style.display = showLubBlock ? 'block' : 'none';
+
+            if(showFuelBlock) loadDashboardFuelBlock();
+            if(showLubBlock) loadDashboardLubBlock();
+
+            renderTimeline();
+        }
+
+        // Cards + gráfico de diesel/abastecimento (Comboio e ADM)
+        function loadDashboardFuelBlock() {
+            getAllDB('supplies', (supplies) => {
+                const today = getTodayBR();
+                const todaySupplies = supplies.filter(s => s.date === today);
+                
+                document.getElementById('dash-total-liters').innerText = todaySupplies.reduce((acc, curr) => acc + curr.liters, 0) + " L";
+                document.getElementById('dash-total-count').innerText = todaySupplies.length;
+                document.getElementById('dash-total-hours').innerText = todaySupplies.reduce((acc, curr) => acc + curr.hoursWorked, 0).toFixed(1) + " h";
+
+                const machineStats = {};
+                todaySupplies.forEach(s => {
+                    if(s.litersPerHour > 0) {
+                        if(!machineStats[s.machineId]) machineStats[s.machineId] = { totalLPH: 0, count: 0 };
+                        machineStats[s.machineId].totalLPH += s.litersPerHour;
+                        machineStats[s.machineId].count += 1;
+                    }
+                });
+
+                const labels = Object.keys(machineStats);
+                const dataPoints = labels.map(id => (machineStats[id].totalLPH / machineStats[id].count).toFixed(2));
+
+                const ctx = document.getElementById('chartConsumo').getContext('2d');
+                if(myChartDash) myChartDash.destroy();
+                
+                const isLight = document.body.getAttribute('data-theme') === 'light';
+                const gridColor = isLight ? '#e2e8f0' : 'rgba(255,255,255,0.1)';
+                const textColor = isLight ? '#4a5568' : '#cbd5e0';
+
+                myChartDash = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{ label: 'Média L/hora (Hoje)', data: dataPoints, backgroundColor: 'rgba(0, 230, 118, 0.7)', borderRadius: 4 }]
+                    },
+                    options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { grid: {color: gridColor}, ticks: { color: textColor } }, x: { ticks: { color: textColor } } } }
+                });
+            });
+        }
+
+        // Cards de saldo de lubrificante (perfil Lubrificantes e ADM)
+        function loadDashboardLubBlock() {
+            getAllDB('lubricants', (lubs) => {
+                const grid = document.getElementById('dash-lub-balance-grid');
+                grid.innerHTML = '';
+                lubs.forEach(l => {
+                    grid.innerHTML += `<div class="stat-card"><h3>${l.name}</h3><div class="stat-value">${l.balance} L</div></div>`;
+                });
+            });
+
+            getAllDB('lubricantMovements', (movs) => {
+                const today = getTodayBR();
+                const count = movs.filter(m => m.date === today && m.kind === 'saida').length;
+                document.getElementById('dash-lub-count').innerText = count;
+            });
+        }
+
+        // PERFIL COMPLETO DA MÁQUINA
+        function backFromMachineProfile() {
+            showView(currentUser.role === 'ADM' ? 'view-machines' : 'view-machines-view');
+        }
+
+        function openMachineProfile(prefix) {
+            showView('view-machine-profile');
+
+            const role = currentUser.role;
+            const showFuelSection = role === 'ADM' || role === 'Comboista';
+            const showLubSection = role === 'ADM' || role === 'Lubrificantes';
+            document.getElementById('prof-fuel-section').style.display = showFuelSection ? 'block' : 'none';
+            document.getElementById('prof-lub-section').style.display = showLubSection ? 'block' : 'none';
+
+            const tx = db.transaction('machines', 'readonly');
+            tx.objectStore('machines').get(prefix).onsuccess = (e) => {
+                document.getElementById('prof-mach-name').innerText = `${e.target.result.prefix} - ${e.target.result.name}`;
+            };
+
+            if(showFuelSection) getAllDB('supplies', (supplies) => {
+                const machSupplies = supplies.filter(s => s.machineId === prefix);
+                const table = document.querySelector('#prof-history-table tbody');
+                table.innerHTML = '';
+                
+                let totalLiters = 0;
+                let sumLPH = 0; let countLPH = 0;
+                const dailyData = {};
+
+                machSupplies.reverse().forEach(s => {
+                    totalLiters += s.liters;
+                    if(s.litersPerHour > 0) { sumLPH += s.litersPerHour; countLPH++; }
+                    
+                    // Agrupar para gráfico diário
+                    if(!dailyData[s.date]) dailyData[s.date] = 0;
+                    dailyData[s.date] += s.liters;
+
+                    table.innerHTML += `<tr>
+                        <td>${s.date} ${s.time}</td>
+                        <td>${s.liters} L</td>
+                        <td>${s.horimeter}</td>
+                        <td>${s.hoursWorked} h</td>
+                        <td>${s.litersPerHour > 0 ? s.litersPerHour : '-'}</td>
+                    </tr>`;
+                });
+
+                document.getElementById('prof-total-liters').innerText = totalLiters + " L";
+                document.getElementById('prof-avg-lph').innerText = countLPH > 0 ? (sumLPH / countLPH).toFixed(2) + " L/h" : "0 L/h";
+
+                // Gráfico do Perfil (Consumo em Linha do Tempo)
+                const labels = Object.keys(dailyData).reverse();
+                const data = labels.map(date => dailyData[date]);
+
+                const ctx = document.getElementById('chartMachineProfile').getContext('2d');
+                if(myChartProfile) myChartProfile.destroy();
+
+                const isLight = document.body.getAttribute('data-theme') === 'light';
+
+                myChartProfile = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{ label: 'Litros Abastecidos', data: data, borderColor: '#4fc3f7', backgroundColor: 'rgba(79, 195, 247, 0.2)', fill: true, tension: 0.3 }]
+                    },
+                    options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { grid: {color: isLight?'#e2e8f0':'rgba(255,255,255,0.1)'}, ticks: {color: isLight?'#4a5568':'#cbd5e0'} }, x: { ticks: {color: isLight?'#4a5568':'#cbd5e0'} } } }
+                });
+            });
+
+            // Histórico de Lubrificação da máquina (isolado do histórico de diesel acima)
+            if(showLubSection) getAllDB('lubricantMovements', (movs) => {
+                const machLub = movs.filter(m => m.kind === 'saida' && m.machineId === prefix).slice().reverse();
+                const table = document.querySelector('#prof-lub-table tbody');
+                table.innerHTML = '';
+
+                if(machLub.length === 0) {
+                    table.innerHTML = `<tr><td colspan="9" style="text-align:center; color:var(--text-muted);">Nenhuma lubrificação registrada para esta máquina.</td></tr>`;
+                    return;
+                }
+
+                const cell = (v) => v ? v + 'L' : '-';
+                const cellWithLph = (v, lph) => {
+                    if(!v) return '-';
+                    return (lph !== undefined && lph !== null) ? `${v}L <span style="color:var(--accent-green); font-size:0.8em;">(${lph} L/h)</span>` : `${v}L`;
+                };
+                machLub.forEach(m => {
+                    table.innerHTML += `<tr>
+                        <td>${m.date} ${m.shift || ''}</td>
+                        <td>${m.horimeter || '-'}</td>
+                        <td>${cellWithLph(m.hidraulico, m.hidraulicoLph)}</td>
+                        <td>${cellWithLph(m.corrente, m.correnteLph)}</td>
+                        <td>${cell(m.motor)}</td>
+                        <td>${cell(m.graxa)}</td>
+                        <td>${cell(m.transmissao)}</td>
+                        <td>${cell(m.radiex)}</td>
+                        <td>${m.note || '-'}</td>
+                    </tr>`;
+                });
+            });
+        }
+
+        // EXPORTAÇÃO EXCEL, PDF E ZAP COM COLUNAS ESPECÍFICAS
         function getExportData(callback) {
             getAllDB('supplies', (supplies) => {
                 const today = getTodayBR();
@@ -2269,6 +2871,7 @@
             });
         }
 
+        // BACKUP E IMPORTAÇÃO
         function backupData() {
             getAllDB('machines', (machines) => {
                 getAllDB('supplies', (supplies) => {
@@ -2299,6 +2902,7 @@
             reader.readAsText(file);
         }
 
+        // ===== NOVO: Consultar Máquinas (somente leitura, para o Comboista) =====
         function renderMachinesViewOnly() {
             if(!db) return;
             const filter = (document.getElementById('machines-view-filter').value || '').toLowerCase().trim();
@@ -2318,6 +2922,7 @@
             });
         }
 
+        // ===== NOVO: Histórico com Editar / Excluir apontamentos =====
         function renderHistoryEditable() {
             if(!db) return;
             const filterDateISO = document.getElementById('history-date-filter').value;
@@ -2356,6 +2961,7 @@
             });
         }
 
+        // ===== NOVO: Modal de Edição de Apontamento =====
         let editingSupplyId = null;
 
         function openEditModal(id) {
@@ -2365,10 +2971,11 @@
                 if(!s) return;
                 editingSupplyId = id;
 
+                // Converte data BR (dd/mm/aaaa) para ISO (aaaa-mm-dd) para o input type=date
                 const [d, m, y] = s.date.split('/');
                 document.getElementById('edit-date').value = `${y}-${m}-${d}`;
                 document.getElementById('edit-machine').value = `${s.machineId} - ${s.machineName}`;
-                
+                // Horímetro anterior de referência: horímetro atual menos as horas trabalhadas registradas
                 const prevRef = (s.horimeterPrev !== undefined) ? s.horimeterPrev : Math.round((s.horimeter*10) - (s.hoursWorked*10))/10;
                 document.getElementById('edit-horimeter-prev').value = prevRef;
                 document.getElementById('edit-horimeter').value = s.horimeter;
@@ -2398,6 +3005,8 @@
             lphEl.innerText = lph;
         }
 
+        // Ajusta o saldo do Caminhão-Comboio por uma diferença (delta pode ser positivo ou negativo).
+        // Usado quando um apontamento é editado (litros mudaram) ou excluído (devolve os litros).
         function adjustComboioFuel(delta, note, callback) {
             const tx = db.transaction('fuelTanks', 'readonly');
             tx.objectStore('fuelTanks').get('comboio').onsuccess = (e) => {
@@ -2405,6 +3014,7 @@
                 if(!comboio) return callback(false);
                 comboio.balance = round1(comboio.balance + delta);
                 putDB('fuelTanks', comboio, () => {
+                    enqueueSync('tanques', comboio);
                     const movement = {
                         type: 'ajuste',
                         tankId: 'comboio',
@@ -2412,7 +3022,8 @@
                         date: getTodayBR(),
                         time: new Date().toLocaleTimeString('pt-BR'),
                         note: note,
-                        user: currentUser.name
+                        user: currentUser.name,
+                        syncId: guid()
                     };
                     putDB('fuelMovements', movement, () => {
                         enqueueSync('combustivel', movement);
@@ -2439,7 +3050,7 @@
 
                 const hoursWorked = Math.round((newHorimeter * 10) - (prevHorimeter * 10)) / 10;
                 const litersPerHour = hoursWorked > 0 ? parseFloat((newLiters / hoursWorked).toFixed(2)) : 0;
-                const litersDelta = newLiters - s.liters; 
+                const litersDelta = newLiters - s.liters; // positivo = descontar mais do comboio; negativo = devolver
 
                 const [y, m, d] = newDateISO.split('-');
                 s.date = `${d}/${m}/${y}`;
@@ -2449,15 +3060,17 @@
                 s.hoursWorked = hoursWorked;
                 s.litersPerHour = litersPerHour;
 
+                // NOVO: ajusta o saldo de diesel do Comboio pela diferença de litros editada
                 adjustComboioFuel(-litersDelta, `Edição do apontamento #${s.id} (${s.machineId})`, (ok, newBalance) => {
                     if(!ok) return alert("Erro ao ajustar o saldo de combustível. Tente novamente.");
                     if(litersDelta > 0 && newBalance < 0) {
+                        // Saldo ficou negativo: avisa mas não desfaz, para não travar o usuário numa correção legítima.
                         alert(`Atenção: o saldo do Caminhão-Comboio ficou negativo (${newBalance} L) após esse aumento de litros. Registre uma transferência para regularizar.`);
                     }
 
                     putDB('supplies', s, () => {
                         enqueueSync('diesel', { ...s, syncKind: 'edicao' });
-                        
+                        // Se este for o apontamento mais recente da máquina, atualiza também o horímetro da máquina
                         getAllDB('supplies', (all) => {
                             const sameMachine = all.filter(x => x.machineId === s.machineId);
                             const maxHorimeter = Math.max(...sameMachine.map(x => x.horimeter));
@@ -2486,6 +3099,7 @@
                 const s = e.target.result;
                 if(!s) return;
 
+                // NOVO: devolve os litros ao saldo do Caminhão-Comboio antes de excluir o apontamento
                 adjustComboioFuel(s.liters, `Exclusão do apontamento #${id} (${s.machineId})`, (ok) => {
                     if(!ok) return alert("Erro ao devolver o saldo de combustível. Tente novamente.");
                     enqueueSync('diesel', { ...s, syncKind: 'exclusao' });
@@ -2498,36 +3112,8 @@
                 });
             };
         }
-
-        // ===== NOVO: Função para puxar dados da nuvem (Sheets -> App) =====
-        function pullFromCloud() {
-            if(!navigator.onLine) return alert("Você está offline! Conecte à internet para baixar dados.");
-            if(!GOOGLE_SCRIPT_URL) return alert("URL do Google Script não configurada.");
-            
-            const btn = document.getElementById('btn-pull-cloud');
-            if(btn) btn.innerHTML = "⏳ Baixando...";
-            
-            fetch(GOOGLE_SCRIPT_URL)
-            .then(res => res.json())
-            .then(data => {
-                // Se achou máquinas no Google Sheets, salva elas no celular/notebook
-                if(data.maquinas && data.maquinas.length > 0) {
-                    data.maquinas.forEach(m => {
-                        putDB('machines', m);
-                    });
-                }
-                
-                alert("Dados da nuvem atualizados com sucesso!");
-                if(btn) btn.innerHTML = "⬇️ Puxar Dados";
-                loadData(); // Atualiza a tela
-            })
-            .catch(err => {
-                alert("Erro ao buscar dados da nuvem.");
-                if(btn) btn.innerHTML = "⬇️ Puxar Dados";
-            });
-        }
     </script>
-    
+    <!-- NOVO: Modal de Edição de Apontamento -->
     <div id="edit-modal" class="modal">
         <div class="modal-content">
             <div class="modal-title">✏️ Editar Apontamento</div>
